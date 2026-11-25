@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cooking Rush — make.fun</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:#2b1d12;color:#fff;min-height:100vh;display:flex;justify-content:center;padding:12px}
+  #app{width:100%;max-width:960px;background:#fff7e8;color:#3a2a18;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+  header{background:#e2572b;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  header h1{font-size:26px;letter-spacing:.5px}
+  header h1 span{font-size:15px;opacity:.9}
+  .hud{display:flex;gap:14px;font-weight:700;font-size:17px}
+  .hud b{color:#ffe08a}
+  #shiftBar{height:10px;background:#ffd9c7}
+  #shiftFill{height:100%;width:100%;background:#2f9e44;transition:width .3s linear}
+  main{padding:14px 16px 18px}
+  h2{font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#8a5a2b;margin:6px 0 8px}
+  #orders{display:flex;gap:10px;min-height:118px}
+  .order{flex:1;background:#fff;border:2px solid #e8c88f;border-radius:12px;padding:10px;text-align:center;position:relative}
+  .order.active{border-color:#e2572b;box-shadow:0 0 0 3px #ffd0bd}
+  .order .dish{font-size:42px}
+  .order .name{font-weight:800;margin:2px 0}
+  .order .need{font-size:14px;color:#6b4a22}
+  .order .patience{height:8px;background:#eee;border-radius:4px;margin-top:8px;overflow:hidden}
+  .order .patience i{display:block;height:100%;background:#2f9e44}
+  .order .reward{font-size:13px;font-weight:700;color:#b3541e;margin-top:4px}
+  .order.empty{display:flex;align-items:center;justify-content:center;color:#b99c7a;border-style:dashed}
+  #plateWrap{background:#fff;border:2px solid #e8c88f;border-radius:12px;padding:12px;margin-top:12px;text-align:center}
+  #plate{font-size:34px;min-height:48px;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
+  #plate .slot{width:52px;height:52px;border:2px dashed #d9b98a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;background:#fffaf0}
+  #plate .slot.filled{border-style:solid;border-color:#e2572b}
+  .btn{border:0;border-radius:10px;padding:11px 18px;font-size:16px;font-weight:800;cursor:pointer}
+  #serveBtn{background:#2f9e44;color:#fff;margin-top:10px}
+  #serveBtn:disabled{background:#b9b9b9;cursor:not-allowed}
+  #clearBtn{background:#f1e3c8;color:#7a5a2b;margin-top:10px;margin-left:8px}
+  #ingredients{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px}
+  .ing{background:#fff;border:2px solid #e8c88f;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;user-select:none}
+  .ing:hover{border-color:#e2572b;transform:translateY(-2px)}
+  .ing .em{font-size:36px}
+  .ing .nm{font-weight:700;font-size:14px;margin-top:4px}
+  .ing.cooking{opacity:.55;pointer-events:none}
+  #msg{min-height:26px;text-align:center;font-weight:700;color:#b3541e;margin-top:8px}
+  #overlay{position:fixed;inset:0;background:rgba(43,29,18,.82);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+  #overlay .card{background:#fff7e8;color:#3a2a18;border-radius:18px;padding:28px;max-width:520px;width:100%;text-align:center}
+  #overlay h2{font-size:30px;color:#e2572b;text-transform:none;letter-spacing:0}
+  #overlay p{margin:10px 0;line-height:1.55}
+  #startBtn{background:#e2572b;color:#fff;font-size:18px;padding:13px 26px}
+  .hidden{display:none!important}
+  @media(max-width:640px){#ingredients{grid-template-columns:repeat(3,1fr)}#orders{flex-direction:column}.order{min-height:110px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🍳 Cooking Rush <span>· make.fun</span></h1>
+    <div class="hud"><span>⏱ <b id="time">120</b>s</span><span>🪙 <b id="coins">0</b></span><span>✅ Served <b id="served">0</b></span><span>❌ Missed <b id="missed">0</b></span><span>🔥 Combo <b id="combo">x1</b></span></div>
+  </header>
+  <div id="shiftBar"><div id="shiftFill"></div></div>
+  <main>
+    <h2>📋 Order Board — click an order, then tap its ingredients</h2>
+    <div id="orders"></div>
+    <div id="plateWrap">
+      <h2>🍽 Your Plate</h2>
+      <div id="plate"></div>
+      <button class="btn" id="serveBtn" disabled>🍽 Serve Dish</button>
+      <button class="btn" id="clearBtn">↺ Clear Plate</button>
+      <div id="msg">Pick an order to start cooking!</div>
+    </div>
+    <h2>🥬 Ingredients — kitchen (offline, no downloads needed)</h2>
+    <div id="ingredients"></div>
+    <p style="text-align:center;color:#8a6a44;font-size:13px;margin-top:12px">Tip: serve fast for a combo bonus. An order that runs out of patience is lost. Shift lasts 120 seconds.</p>
+  <p style="text-align:center;color:#8a6a44;font-size:13px;margin-top:6px">⌨️ Keys: <b>1 / 2 / 3</b> pick an order · <b>Enter</b> serve · <b>C</b> clear plate</p>
+  </main>
+</div>
+<div id="overlay"><div class="card">
+  <h2 id="ovTitle">🍳 Cooking Rush</h2>
+  <p id="ovText">Run the kitchen! Orders come in on the board — click one, tap its 3 ingredients to fill your plate, then hit <b>Serve Dish</b> before its patience runs out. Fast serves build your combo and earn more coins.</p>
+  <button class="btn" id="startBtn">▶ Start Shift (120s)</button>
+</div></div>
+<script>
+const INGREDIENTS=[
+ {id:'bun',em:'🍞',name:'Bun'},{id:'patty',em:'🥩',name:'Patty'},{id:'lettuce',em:'🥬',name:'Lettuce'},
+ {id:'dough',em:'🫓',name:'Dough'},{id:'cheese',em:'🧀',name:'Cheese'},{id:'tomato',em:'🍅',name:'Tomato'},
+ {id:'pasta',em:'🍝',name:'Pasta'},{id:'rice',em:'🍚',name:'Rice'},{id:'fish',em:'🐟',name:'Fish'},
+ {id:'seaweed',em:'🌿',name:'Seaweed'},{id:'tortilla',em:'🌮',name:'Tortilla'},{id:'beef',em:'🥩',name:'Beef'},
+ {id:'egg',em:'🥚',name:'Egg'},{id:'bacon',em:'🥓',name:'Bacon'},{id:'sauce',em:'🥫',name:'Sauce'}];
+const DISHES=[
+ {name:'Burger',em:'🍔',need:['bun','patty','lettuce'],reward:10},
+ {name:'Pizza',em:'🍕',need:['dough','cheese','tomato'],reward:12},
+ {name:'Salad',em:'🥗',need:['lettuce','tomato','egg'],reward:8},
+ {name:'Pasta',em:'🍝',need:['pasta','tomato','cheese'],reward:11},
+ {name:'Sushi',em:'🍣',need:['rice','fish','seaweed'],reward:14},
+ {name:'Taco',em:'🌮',need:['tortilla','beef','cheese'],reward:10},
+ {name:'Breakfast',em:'🍳',need:['egg','bacon','bun'],reward:11}];
+let orders=[],selected=null,plate=[],coins=0,served=0,missed=0,combo=1,comboStreak=0,timeLeft=120,timer=null,spawnTimer=null,running=false;
+const $=id=>document.getElementById(id);
+function beep(f){try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.frequency.value=f;g.gain.value=.08;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.12);}catch(e){}}
+function renderIngredients(){
+  $('ingredients').innerHTML=INGREDIENTS.map(i=>`<div class="ing" data-id="${i.id}"><div class="em">${i.em}</div><div class="nm">${i.name}</div></div>`).join('');
+  document.querySelectorAll('.ing').forEach(el=>el.onclick=()=>addIngredient(el.dataset.id));
+}
+function renderPlate(){
+  const p=$('plate');
+  p.innerHTML='';
+  for(let k=0;k<3;k++){const s=document.createElement('div');s.className='slot'+(plate[k]?' filled':'');
+    s.textContent=plate[k]?INGREDIENTS.find(i=>i.id===plate[k]).em:'';p.appendChild(s);}
+  $('serveBtn').disabled=!(running&&selected!==null&&plate.length===3);
+}
+function renderOrders(){
+  const box=$('orders');box.innerHTML='';
+  for(let k=0;k<3;k++){
+    const o=orders[k];const d=document.createElement('div');
+    if(!o){d.className='order empty';d.textContent='— waiting for orders —';box.appendChild(d);continue;}
+    d.className='order'+(selected===k?' active':'');
+    const pct=Math.max(0,Math.round(o.patience/o.max*100));
+    d.innerHTML=`<div class="dish">${o.dish.em}</div><div class="name">${o.dish.name}</div><div class="need">${o.dish.need.map(n=>INGREDIENTS.find(i=>i.id===n).em).join(' + ')}</div><div class="patience"><i style="width:${pct}%;background:${pct>50?'#2f9e44':pct>25?'#e8a13c':'#d64545'}"></i></div><div class="reward">🪙 ${o.dish.reward} coins · ${Math.ceil(o.patience)}s left</div>`;
+    d.onclick=()=>{if(!running)return;selected=k;plate=[];renderOrders();renderPlate();$('msg').textContent='Cooking: '+o.dish.name+' — tap its 3 ingredients below.';beep(520);};
+    box.appendChild(d);
+  }
+}
+function addIngredient(id){
+  if(!running){$('msg').textContent='Press Start Shift first!';return;}
+  if(selected===null){$('msg').textContent='Pick an order on the board first!';return;}
+  if(plate.length>=3){$('msg').textContent='Plate is full — serve or clear it.';return;}
+  if(plate.includes(id)){$('msg').textContent='That ingredient is already on the plate.';return;}
+  plate.push(id);renderPlate();beep(660);
+  if(plate.length===3)$('msg').textContent='Plate ready — hit Serve Dish!';
+}
+function spawnOrder(){
+  if(!running||orders.filter(Boolean).length>=3)return;
+  const dish=DISHES[Math.floor(Math.random()*DISHES.length)];
+  const max=26-Math.min(8,Math.floor(served/3)*2);
+  const slot=orders.findIndex(o=>!o);if(slot<0)return;
+  orders[slot]={dish,patience:max,max};
+  renderOrders();
+}
+function serve(){
+  if(selected===null||plate.length!==3)return;
+  const o=orders[selected];if(!o)return;
+  const want=[...o.dish.need].sort().join(','),got=[...plate].sort().join(',');
+  if(want===got){
+    const gain=o.dish.reward*combo;coins+=gain;served++;comboStreak++;
+    combo=1+Math.min(3,Math.floor(comboStreak/2));
+    $('msg').textContent=`✅ Served ${o.dish.name}! +${gain} coins (combo x${combo})`;
+    beep(880);
+  }else{
+    comboStreak=0;combo=1;missed++;
+    $('msg').textContent=`❌ Wrong ingredients for ${o.dish.name} — no coins, combo reset.`;
+    beep(220);
+  }
+  orders[selected]=null;selected=null;plate=[];
+  $('coins').textContent=coins;$('served').textContent=served;$('missed').textContent=missed;$('combo').textContent='x'+combo;
+  renderOrders();renderPlate();setTimeout(spawnOrder,600);
+}
+function tick(){
+  timeLeft--;$('time').textContent=timeLeft;$('shiftFill').style.width=(timeLeft/120*100)+'%';
+  orders.forEach((o,i)=>{if(!o)return;o.patience-=1;
+    if(o.patience<=0){orders[i]=null;missed++;$('missed').textContent=missed;comboStreak=0;combo=1;$('combo').textContent='x1';
+      if(selected===i){selected=null;plate=[];renderPlate();}
+      $('msg').textContent='⏰ An order ran out of patience and left!';beep(180);}});
+  renderOrders();
+  if(timeLeft<=0)endGame();
+}
+function startGame(){
+  orders=[null,null,null];selected=null;plate=[];coins=0;served=0;missed=0;combo=1;comboStreak=0;timeLeft=120;running=true;
+  $('coins').textContent=0;$('served').textContent=0;$('missed').textContent=0;$('combo').textContent='x1';$('time').textContent=120;$('shiftFill').style.width='100%';
+  $('overlay').classList.add('hidden');$('msg').textContent='Pick an order to start cooking!';
+  renderIngredients();renderOrders();renderPlate();
+  spawnOrder();setTimeout(spawnOrder,1500);setTimeout(spawnOrder,3000);
+  spawnTimer=setInterval(()=>{if(running)spawnOrder();},4000);
+  timer=setInterval(tick,1000);
+}
+function endGame(){
+  running=false;clearInterval(timer);clearInterval(spawnTimer);
+  $('ovTitle').textContent='🏁 Shift Over!';
+  $('ovText').innerHTML=`You served <b>${served}</b> dishes, missed <b>${missed}</b>, and earned <b>🪙 ${coins} coins</b>.<br>Play again to beat your score — faster serves build a bigger combo!`;
+  $('startBtn').textContent='↻ Play Again';
+  $('overlay').classList.remove('hidden');beep(440);
+}
+$('serveBtn').onclick=serve;
+$('clearBtn').onclick=()=>{plate=[];renderPlate();$('msg').textContent='Plate cleared.';};
+document.addEventListener('keydown',e=>{
+  if(!running)return;
+  if(e.key>='1'&&e.key<='3'){
+    const k=Number(e.key)-1;
+    if(orders[k]){selected=k;plate=[];renderOrders();renderPlate();$('msg').textContent='Cooking: '+orders[k].dish.name+' — tap its 3 ingredients below.';beep(520);}
+  }else if(e.key==='Enter'){if(!$('serveBtn').disabled)serve();}
+  else if(e.key==='c'||e.key==='C'){plate=[];renderPlate();$('msg').textContent='Plate cleared.';}
+});
+$('startBtn').onclick=startGame;
+renderIngredients();renderOrders();renderPlate();
+</script>
+</body>
+</html>
